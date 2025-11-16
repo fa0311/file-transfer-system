@@ -1,28 +1,28 @@
-# ファイル転送システム
+# File Transfer System
 
-Go と gRPC を使用したサーバー間のファイル転送システムです。
+A server-to-server file transfer system using Go and gRPC.
 
-## 概要
+## Overview
 
-このシステムは以下の機能を提供します：
+This system provides the following features:
 
-- サーバー A/B が相互にファイルを転送
-- クライアント C が HTTP 経由で転送を指示
-- ワイルドカード対応で複数ファイルの転送が可能
-- 大容量ファイル（30GB 以上）のストリーミング転送
-- JSONL 形式でのリアルタイム進捗報告
-- SHA256 チェックサムによるデータ整合性検証
+- Bidirectional file transfer between Server A and Server B
+- Transfer initiation via HTTP from Client C
+- Wildcard support for multiple file transfers
+- Streaming transfer for large files (30GB+)
+- Real-time progress reporting in JSONL format
+- Data integrity verification with SHA256 checksums
 
-## アーキテクチャ
+## Architecture
 
 ```
-クライアントC --[HTTP POST]--> サーバーA --[gRPC Stream]--> サーバーB
-クライアントC --[HTTP POST]--> サーバーB --[gRPC Stream]--> サーバーA
+Client C --[HTTP POST]--> Server A --[gRPC Stream]--> Server B
+Client C --[HTTP POST]--> Server B --[gRPC Stream]--> Server A
 ```
 
-## 必要な環境変数
+## Required Environment Variables
 
-### サーバー A
+### Server A
 
 ```bash
 GRPC_LISTEN_ADDR=0.0.0.0:50051
@@ -31,7 +31,7 @@ TARGET_SERVER=server-b:50051
 ALLOWED_DIR=/data
 ```
 
-### サーバー B
+### Server B
 
 ```bash
 GRPC_LISTEN_ADDR=0.0.0.0:50051
@@ -40,34 +40,34 @@ TARGET_SERVER=server-a:50051
 ALLOWED_DIR=/data
 ```
 
-## ビルド
+## Build
 
-### ローカルビルド
+### Local Build
 
 ```bash
-# 依存関係のインストール
+# Install dependencies
 go mod tidy
 
-# Protocol Buffersの生成
+# Generate Protocol Buffers
 protoc --go_out=. --go_opt=paths=source_relative \
        --go-grpc_out=. --go-grpc_opt=paths=source_relative \
        api/proto/transfer.proto
 
-# ビルド
+# Build
 go build -o server ./cmd/server
 ```
 
-### Docker ビルド
+### Docker Build
 
 ```bash
 docker build -t file-transfer-server .
 ```
 
-## 実行方法
+## Running
 
-### ローカル実行
+### Local Execution
 
-#### サーバー A の起動
+#### Starting Server A
 
 ```bash
 export GRPC_LISTEN_ADDR=0.0.0.0:50051
@@ -78,7 +78,7 @@ export ALLOWED_DIR=/data
 ./server
 ```
 
-#### サーバー B の起動
+#### Starting Server B
 
 ```bash
 export GRPC_LISTEN_ADDR=0.0.0.0:50052
@@ -89,9 +89,9 @@ export ALLOWED_DIR=/data
 ./server
 ```
 
-### Docker Compose での実行
+### Docker Compose Execution
 
-`docker-compose.yml`を作成：
+Create `docker-compose.yml`:
 
 ```yaml
 version: "3.8"
@@ -135,29 +135,29 @@ networks:
   transfer-network:
 ```
 
-起動：
+Start services:
 
 ```bash
-# サービスの起動
+# Start services
 docker-compose up -d
 
-# ログの確認
+# View logs
 docker-compose logs -f
 
-# サービスの停止
+# Stop services
 docker-compose down
 ```
 
-## API 使用方法
+## API Usage
 
-### ファイル転送のリクエスト
+### File Transfer Request
 
-**エンドポイント:** `POST /transfer`
+**Endpoint:** `POST /transfer`
 
-**リクエスト例:**
+**Request Examples:**
 
 ```bash
-# 単一ファイルの転送
+# Transfer a single file
 curl -X POST http://server-a:8080/transfer \
   -H "Content-Type: application/json" \
   -d '{
@@ -165,7 +165,7 @@ curl -X POST http://server-a:8080/transfer \
     "dest_path": "/data/received/"
   }'
 
-# ワイルドカードを使用した複数ファイルの転送
+# Transfer multiple files with wildcards
 curl -X POST http://server-a:8080/transfer \
   -H "Content-Type: application/json" \
   -d '{
@@ -174,9 +174,9 @@ curl -X POST http://server-a:8080/transfer \
   }'
 ```
 
-**レスポンス:**
+**Response:**
 
-JSONL (JSON Lines) 形式でリアルタイム進捗を返します：
+Returns real-time progress in JSONL (JSON Lines) format:
 
 ```
 {"type":"info","message":"Transfer started","time":"2024-11-16T18:30:00Z"}
@@ -184,15 +184,15 @@ JSONL (JSON Lines) 形式でリアルタイム進捗を返します：
 {"type":"completed","message":"Transfer completed successfully","time":"2024-11-16T18:30:10Z"}
 ```
 
-### ヘルスチェック
+### Health Check
 
-**エンドポイント:** `GET /health`
+**Endpoint:** `GET /health`
 
 ```bash
 curl http://server-a:8080/health
 ```
 
-**レスポンス:**
+**Response:**
 
 ```json
 {
@@ -201,91 +201,96 @@ curl http://server-a:8080/health
 }
 ```
 
-## セキュリティ機能
+## Security Features
 
-1. **パストラバーサル攻撃防止**
+1. **Path Traversal Attack Prevention**
 
-   - すべてのファイルパスは`ALLOWED_DIR`内に制限
-   - `..`などの不正なパスは拒否
+   - All file paths are restricted within `ALLOWED_DIR`
+   - Rejects malicious paths containing `..`
 
-2. **チェックサム検証**
-   - 各チャンク転送時に SHA256 チェックサムを検証
-   - データの整合性を保証
+2. **Checksum Verification**
+   - Verifies SHA256 checksum for each chunk transfer
+   - Ensures data integrity
 
-## 技術仕様
+## Technical Specifications
 
-- **チャンクサイズ:** 1MB
-- **転送プロトコル:** gRPC 双方向ストリーミング
-- **進捗報告:** JSONL (JSON Lines)
-- **リトライ:** 最大 3 回（自動リトライ）
+- **Chunk Size:** 1MB
+- **Transfer Protocol:** gRPC bidirectional streaming
+- **Progress Reporting:** JSONL (JSON Lines)
+- **Retry:** Maximum 3 attempts (automatic retry)
 
-## トラブルシューティング
+## Troubleshooting
 
-### ピア接続エラー
+### Peer Connection Error
 
 ```
 Failed to connect to peer after 10 attempts
 ```
 
-**解決方法:**
+**Solution:**
 
-1. `TARGET_SERVER`の設定を確認
-2. ネットワーク接続を確認
-3. 相手サーバーが起動しているか確認
+1. Verify `TARGET_SERVER` configuration
+2. Check network connectivity
+3. Ensure peer server is running
 
-### パス検証エラー
+### Path Validation Error
 
 ```
 path is outside allowed directory
 ```
 
-**解決方法:**
+**Solution:**
 
-1. `ALLOWED_DIR`が正しく設定されているか確認
-2. 指定したパスが`ALLOWED_DIR`内にあるか確認
+1. Verify `ALLOWED_DIR` is correctly configured
+2. Ensure specified path is within `ALLOWED_DIR`
 
-### ディレクトリ権限エラー
+### Directory Permission Error
 
 ```
 ALLOWED_DIR is not writable
 ```
 
-**解決方法:**
+**Solution:**
 
-1. `ALLOWED_DIR`の権限を確認: `ls -la /data`
-2. 必要に応じて権限を変更: `chmod 755 /data`
+1. Check `ALLOWED_DIR` permissions: `ls -la /data`
+2. Modify permissions if needed: `chmod 755 /data`
 
-## ディレクトリ構造
+## Directory Structure
 
 ```
 file-transfer-system/
 ├── cmd/
 │   └── server/
-│       └── main.go              # エントリーポイント
+│       └── main.go              # Entry point
 ├── internal/
 │   ├── config/
-│   │   └── config.go            # 設定管理
+│   │   └── config.go            # Configuration management
 │   ├── grpc/
-│   │   ├── server.go            # gRPCサーバー
-│   │   └── client.go            # gRPCクライアント
+│   │   ├── server.go            # gRPC server
+│   │   └── client.go            # gRPC client
 │   ├── http/
-│   │   └── handler.go           # HTTPハンドラー
+│   │   └── handler.go           # HTTP handler
 │   ├── transfer/
-│   │   ├── sender.go            # ファイル送信
-│   │   ├── receiver.go          # ファイル受信
-│   │   └── validator.go         # パスバリデーション
+│   │   ├── sender.go            # File sending
+│   │   ├── receiver.go          # File receiving
+│   │   └── validator.go         # Path validation
 │   └── progress/
-│       └── tracker.go           # 進捗追跡
+│       └── tracker.go           # Progress tracking
 ├── api/
 │   └── proto/
-│       ├── transfer.proto       # Protocol Buffers定義
-│       ├── transfer.pb.go       # 生成されたGoコード
-│       └── transfer_grpc.pb.go  # 生成されたgRPCコード
+│       ├── transfer.proto       # Protocol Buffers definition
+│       ├── transfer.pb.go       # Generated Go code
+│       └── transfer_grpc.pb.go  # Generated gRPC code
+├── .github/
+│   └── workflows/
+│       └── docker-build.yml     # GitHub Actions workflow
+├── Dockerfile                   # Docker build configuration
+├── docker-compose.yml           # Docker Compose configuration
 ├── go.mod
 ├── go.sum
 └── README.md
 ```
 
-## ライセンス
+## License
 
 MIT License
