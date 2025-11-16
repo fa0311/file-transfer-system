@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   server-a:
-    image: ghcr.io/your-org/file-transfer-server:latest
+    image: ghcr.io/fa0311/file-transfer-system/file-transfer-server:latest
     container_name: file-transfer-server-a
     environment:
       - GRPC_LISTEN_ADDR=0.0.0.0:50051
