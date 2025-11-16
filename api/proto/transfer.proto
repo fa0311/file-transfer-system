@@ -2,57 +2,33 @@ syntax = "proto3";
 
 package transfer;
 
-option go_package = "github.com/fileserver/transfer/api/proto";
+option go_package = "github.com/fa0311/file-transfer-system/api/proto";
 
-// FileTransfer service for transferring files between servers
 service FileTransfer {
-  // Transfer file in streaming mode
-  rpc TransferFile(stream FileChunk) returns (stream TransferStatus);
-  
-  // Get peer server information for startup verification
-  rpc GetPeerInfo(PeerInfoRequest) returns (PeerInfoResponse);
-  
-  // Health check
-  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc Transfer(stream FileChunk) returns (stream TransferResponse) {}
+  rpc DeleteFile(DeleteRequest) returns (DeleteResponse) {}
 }
 
-// FileChunk represents a chunk of file data
 message FileChunk {
-  string file_id = 1;          // Unique identifier for this transfer
-  string file_path = 2;        // Relative file path
-  int64 total_size = 3;        // Total file size in bytes
-  int64 offset = 4;            // Current chunk offset
-  bytes data = 5;              // Chunk data (max 1MB)
-  bytes checksum = 6;          // SHA256 checksum of this chunk
-  bool is_last = 7;            // Indicates if this is the last chunk
-}
-
-// TransferStatus provides progress updates
-message TransferStatus {
-  string file_id = 1;
-  string file_path = 2;
-  int64 bytes_transferred = 3;
+  string file_path = 1;
+  bytes data = 2;
+  int64 offset = 3;
   int64 total_size = 4;
-  float progress_percent = 5;
-  string status = 6;           // "in_progress", "completed", "error"
-  string error_message = 7;
-  double transfer_speed_mbps = 8;
+  string checksum = 5;
+  bool is_last = 6;
 }
 
-// PeerInfoRequest for getting peer information
-message PeerInfoRequest {}
-
-// PeerInfoResponse contains peer server configuration
-message PeerInfoResponse {
-  string target_server = 1;
-  string grpc_listen_addr = 2;
+message TransferResponse {
+  bool success = 1;
+  string message = 2;
+  int64 bytes_transferred = 3;
 }
 
-// HealthCheckRequest for health check
-message HealthCheckRequest {}
+message DeleteRequest {
+  string file_path = 1;
+}
 
-// HealthCheckResponse for health check result
-message HealthCheckResponse {
-  bool healthy = 1;
+message DeleteResponse {
+  bool success = 1;
   string message = 2;
 }

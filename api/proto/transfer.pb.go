@@ -21,16 +21,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// FileChunk represents a chunk of file data
 type FileChunk struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileId        string                 `protobuf:"bytes,1,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`           // Unique identifier for this transfer
-	FilePath      string                 `protobuf:"bytes,2,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`     // Relative file path
-	TotalSize     int64                  `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"` // Total file size in bytes
-	Offset        int64                  `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`                        // Current chunk offset
-	Data          []byte                 `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`                             // Chunk data (max 1MB)
-	Checksum      []byte                 `protobuf:"bytes,6,opt,name=checksum,proto3" json:"checksum,omitempty"`                     // SHA256 checksum of this chunk
-	IsLast        bool                   `protobuf:"varint,7,opt,name=is_last,json=isLast,proto3" json:"is_last,omitempty"`          // Indicates if this is the last chunk
+	FilePath      string                 `protobuf:"bytes,1,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
+	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Offset        int64                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
+	TotalSize     int64                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	Checksum      string                 `protobuf:"bytes,5,opt,name=checksum,proto3" json:"checksum,omitempty"`
+	IsLast        bool                   `protobuf:"varint,6,opt,name=is_last,json=isLast,proto3" json:"is_last,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -65,32 +63,11 @@ func (*FileChunk) Descriptor() ([]byte, []int) {
 	return file_api_proto_transfer_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *FileChunk) GetFileId() string {
-	if x != nil {
-		return x.FileId
-	}
-	return ""
-}
-
 func (x *FileChunk) GetFilePath() string {
 	if x != nil {
 		return x.FilePath
 	}
 	return ""
-}
-
-func (x *FileChunk) GetTotalSize() int64 {
-	if x != nil {
-		return x.TotalSize
-	}
-	return 0
-}
-
-func (x *FileChunk) GetOffset() int64 {
-	if x != nil {
-		return x.Offset
-	}
-	return 0
 }
 
 func (x *FileChunk) GetData() []byte {
@@ -100,11 +77,25 @@ func (x *FileChunk) GetData() []byte {
 	return nil
 }
 
-func (x *FileChunk) GetChecksum() []byte {
+func (x *FileChunk) GetOffset() int64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *FileChunk) GetTotalSize() int64 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+func (x *FileChunk) GetChecksum() string {
 	if x != nil {
 		return x.Checksum
 	}
-	return nil
+	return ""
 }
 
 func (x *FileChunk) GetIsLast() bool {
@@ -114,35 +105,29 @@ func (x *FileChunk) GetIsLast() bool {
 	return false
 }
 
-// TransferStatus provides progress updates
-type TransferStatus struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	FileId            string                 `protobuf:"bytes,1,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`
-	FilePath          string                 `protobuf:"bytes,2,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
-	BytesTransferred  int64                  `protobuf:"varint,3,opt,name=bytes_transferred,json=bytesTransferred,proto3" json:"bytes_transferred,omitempty"`
-	TotalSize         int64                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
-	ProgressPercent   float32                `protobuf:"fixed32,5,opt,name=progress_percent,json=progressPercent,proto3" json:"progress_percent,omitempty"`
-	Status            string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"` // "in_progress", "completed", "error"
-	ErrorMessage      string                 `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
-	TransferSpeedMbps float64                `protobuf:"fixed64,8,opt,name=transfer_speed_mbps,json=transferSpeedMbps,proto3" json:"transfer_speed_mbps,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+type TransferResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Success          bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message          string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	BytesTransferred int64                  `protobuf:"varint,3,opt,name=bytes_transferred,json=bytesTransferred,proto3" json:"bytes_transferred,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
-func (x *TransferStatus) Reset() {
-	*x = TransferStatus{}
+func (x *TransferResponse) Reset() {
+	*x = TransferResponse{}
 	mi := &file_api_proto_transfer_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TransferStatus) String() string {
+func (x *TransferResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TransferStatus) ProtoMessage() {}
+func (*TransferResponse) ProtoMessage() {}
 
-func (x *TransferStatus) ProtoReflect() protoreflect.Message {
+func (x *TransferResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_api_proto_transfer_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -154,88 +139,53 @@ func (x *TransferStatus) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TransferStatus.ProtoReflect.Descriptor instead.
-func (*TransferStatus) Descriptor() ([]byte, []int) {
+// Deprecated: Use TransferResponse.ProtoReflect.Descriptor instead.
+func (*TransferResponse) Descriptor() ([]byte, []int) {
 	return file_api_proto_transfer_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *TransferStatus) GetFileId() string {
+func (x *TransferResponse) GetSuccess() bool {
 	if x != nil {
-		return x.FileId
+		return x.Success
+	}
+	return false
+}
+
+func (x *TransferResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
 	}
 	return ""
 }
 
-func (x *TransferStatus) GetFilePath() string {
-	if x != nil {
-		return x.FilePath
-	}
-	return ""
-}
-
-func (x *TransferStatus) GetBytesTransferred() int64 {
+func (x *TransferResponse) GetBytesTransferred() int64 {
 	if x != nil {
 		return x.BytesTransferred
 	}
 	return 0
 }
 
-func (x *TransferStatus) GetTotalSize() int64 {
-	if x != nil {
-		return x.TotalSize
-	}
-	return 0
-}
-
-func (x *TransferStatus) GetProgressPercent() float32 {
-	if x != nil {
-		return x.ProgressPercent
-	}
-	return 0
-}
-
-func (x *TransferStatus) GetStatus() string {
-	if x != nil {
-		return x.Status
-	}
-	return ""
-}
-
-func (x *TransferStatus) GetErrorMessage() string {
-	if x != nil {
-		return x.ErrorMessage
-	}
-	return ""
-}
-
-func (x *TransferStatus) GetTransferSpeedMbps() float64 {
-	if x != nil {
-		return x.TransferSpeedMbps
-	}
-	return 0
-}
-
-// PeerInfoRequest for getting peer information
-type PeerInfoRequest struct {
+type DeleteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	FilePath      string                 `protobuf:"bytes,1,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PeerInfoRequest) Reset() {
-	*x = PeerInfoRequest{}
+func (x *DeleteRequest) Reset() {
+	*x = DeleteRequest{}
 	mi := &file_api_proto_transfer_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PeerInfoRequest) String() string {
+func (x *DeleteRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PeerInfoRequest) ProtoMessage() {}
+func (*DeleteRequest) ProtoMessage() {}
 
-func (x *PeerInfoRequest) ProtoReflect() protoreflect.Message {
+func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_proto_transfer_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -247,125 +197,41 @@ func (x *PeerInfoRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PeerInfoRequest.ProtoReflect.Descriptor instead.
-func (*PeerInfoRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRequest) Descriptor() ([]byte, []int) {
 	return file_api_proto_transfer_proto_rawDescGZIP(), []int{2}
 }
 
-// PeerInfoResponse contains peer server configuration
-type PeerInfoResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	TargetServer   string                 `protobuf:"bytes,1,opt,name=target_server,json=targetServer,proto3" json:"target_server,omitempty"`
-	GrpcListenAddr string                 `protobuf:"bytes,2,opt,name=grpc_listen_addr,json=grpcListenAddr,proto3" json:"grpc_listen_addr,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *PeerInfoResponse) Reset() {
-	*x = PeerInfoResponse{}
-	mi := &file_api_proto_transfer_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PeerInfoResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PeerInfoResponse) ProtoMessage() {}
-
-func (x *PeerInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_transfer_proto_msgTypes[3]
+func (x *DeleteRequest) GetFilePath() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PeerInfoResponse.ProtoReflect.Descriptor instead.
-func (*PeerInfoResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_transfer_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *PeerInfoResponse) GetTargetServer() string {
-	if x != nil {
-		return x.TargetServer
+		return x.FilePath
 	}
 	return ""
 }
 
-func (x *PeerInfoResponse) GetGrpcListenAddr() string {
-	if x != nil {
-		return x.GrpcListenAddr
-	}
-	return ""
-}
-
-// HealthCheckRequest for health check
-type HealthCheckRequest struct {
+type DeleteResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *HealthCheckRequest) Reset() {
-	*x = HealthCheckRequest{}
-	mi := &file_api_proto_transfer_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *HealthCheckRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HealthCheckRequest) ProtoMessage() {}
-
-func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_transfer_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
-func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_transfer_proto_rawDescGZIP(), []int{4}
-}
-
-// HealthCheckResponse for health check result
-type HealthCheckResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Healthy       bool                   `protobuf:"varint,1,opt,name=healthy,proto3" json:"healthy,omitempty"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *HealthCheckResponse) Reset() {
-	*x = HealthCheckResponse{}
-	mi := &file_api_proto_transfer_proto_msgTypes[5]
+func (x *DeleteResponse) Reset() {
+	*x = DeleteResponse{}
+	mi := &file_api_proto_transfer_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *HealthCheckResponse) String() string {
+func (x *DeleteResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*HealthCheckResponse) ProtoMessage() {}
+func (*DeleteResponse) ProtoMessage() {}
 
-func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_transfer_proto_msgTypes[5]
+func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_transfer_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -376,19 +242,19 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
-func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_transfer_proto_rawDescGZIP(), []int{5}
+// Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
+func (*DeleteResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_transfer_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *HealthCheckResponse) GetHealthy() bool {
+func (x *DeleteResponse) GetSuccess() bool {
 	if x != nil {
-		return x.Healthy
+		return x.Success
 	}
 	return false
 }
 
-func (x *HealthCheckResponse) GetMessage() string {
+func (x *DeleteResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
@@ -399,38 +265,28 @@ var File_api_proto_transfer_proto protoreflect.FileDescriptor
 
 const file_api_proto_transfer_proto_rawDesc = "" +
 	"\n" +
-	"\x18api/proto/transfer.proto\x12\btransfer\"\xc1\x01\n" +
-	"\tFileChunk\x12\x17\n" +
-	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12\x1b\n" +
-	"\tfile_path\x18\x02 \x01(\tR\bfilePath\x12\x1d\n" +
+	"\x18api/proto/transfer.proto\x12\btransfer\"\xa8\x01\n" +
+	"\tFileChunk\x12\x1b\n" +
+	"\tfile_path\x18\x01 \x01(\tR\bfilePath\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data\x12\x16\n" +
+	"\x06offset\x18\x03 \x01(\x03R\x06offset\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x03R\ttotalSize\x12\x16\n" +
-	"\x06offset\x18\x04 \x01(\x03R\x06offset\x12\x12\n" +
-	"\x04data\x18\x05 \x01(\fR\x04data\x12\x1a\n" +
-	"\bchecksum\x18\x06 \x01(\fR\bchecksum\x12\x17\n" +
-	"\ais_last\x18\a \x01(\bR\x06isLast\"\xaa\x02\n" +
-	"\x0eTransferStatus\x12\x17\n" +
-	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12\x1b\n" +
-	"\tfile_path\x18\x02 \x01(\tR\bfilePath\x12+\n" +
-	"\x11bytes_transferred\x18\x03 \x01(\x03R\x10bytesTransferred\x12\x1d\n" +
-	"\n" +
-	"total_size\x18\x04 \x01(\x03R\ttotalSize\x12)\n" +
-	"\x10progress_percent\x18\x05 \x01(\x02R\x0fprogressPercent\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12#\n" +
-	"\rerror_message\x18\a \x01(\tR\ferrorMessage\x12.\n" +
-	"\x13transfer_speed_mbps\x18\b \x01(\x01R\x11transferSpeedMbps\"\x11\n" +
-	"\x0fPeerInfoRequest\"a\n" +
-	"\x10PeerInfoResponse\x12#\n" +
-	"\rtarget_server\x18\x01 \x01(\tR\ftargetServer\x12(\n" +
-	"\x10grpc_listen_addr\x18\x02 \x01(\tR\x0egrpcListenAddr\"\x14\n" +
-	"\x12HealthCheckRequest\"I\n" +
-	"\x13HealthCheckResponse\x12\x18\n" +
-	"\ahealthy\x18\x01 \x01(\bR\ahealthy\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xe3\x01\n" +
+	"total_size\x18\x04 \x01(\x03R\ttotalSize\x12\x1a\n" +
+	"\bchecksum\x18\x05 \x01(\tR\bchecksum\x12\x17\n" +
+	"\ais_last\x18\x06 \x01(\bR\x06isLast\"s\n" +
+	"\x10TransferResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12+\n" +
+	"\x11bytes_transferred\x18\x03 \x01(\x03R\x10bytesTransferred\",\n" +
+	"\rDeleteRequest\x12\x1b\n" +
+	"\tfile_path\x18\x01 \x01(\tR\bfilePath\"D\n" +
+	"\x0eDeleteResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\x94\x01\n" +
 	"\fFileTransfer\x12A\n" +
-	"\fTransferFile\x12\x13.transfer.FileChunk\x1a\x18.transfer.TransferStatus(\x010\x01\x12D\n" +
-	"\vGetPeerInfo\x12\x19.transfer.PeerInfoRequest\x1a\x1a.transfer.PeerInfoResponse\x12J\n" +
-	"\vHealthCheck\x12\x1c.transfer.HealthCheckRequest\x1a\x1d.transfer.HealthCheckResponseB*Z(github.com/fileserver/transfer/api/protob\x06proto3"
+	"\bTransfer\x12\x13.transfer.FileChunk\x1a\x1a.transfer.TransferResponse\"\x00(\x010\x01\x12A\n" +
+	"\n" +
+	"DeleteFile\x12\x17.transfer.DeleteRequest\x1a\x18.transfer.DeleteResponse\"\x00B2Z0github.com/fa0311/file-transfer-system/api/protob\x06proto3"
 
 var (
 	file_api_proto_transfer_proto_rawDescOnce sync.Once
@@ -444,24 +300,20 @@ func file_api_proto_transfer_proto_rawDescGZIP() []byte {
 	return file_api_proto_transfer_proto_rawDescData
 }
 
-var file_api_proto_transfer_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_api_proto_transfer_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_api_proto_transfer_proto_goTypes = []any{
-	(*FileChunk)(nil),           // 0: transfer.FileChunk
-	(*TransferStatus)(nil),      // 1: transfer.TransferStatus
-	(*PeerInfoRequest)(nil),     // 2: transfer.PeerInfoRequest
-	(*PeerInfoResponse)(nil),    // 3: transfer.PeerInfoResponse
-	(*HealthCheckRequest)(nil),  // 4: transfer.HealthCheckRequest
-	(*HealthCheckResponse)(nil), // 5: transfer.HealthCheckResponse
+	(*FileChunk)(nil),        // 0: transfer.FileChunk
+	(*TransferResponse)(nil), // 1: transfer.TransferResponse
+	(*DeleteRequest)(nil),    // 2: transfer.DeleteRequest
+	(*DeleteResponse)(nil),   // 3: transfer.DeleteResponse
 }
 var file_api_proto_transfer_proto_depIdxs = []int32{
-	0, // 0: transfer.FileTransfer.TransferFile:input_type -> transfer.FileChunk
-	2, // 1: transfer.FileTransfer.GetPeerInfo:input_type -> transfer.PeerInfoRequest
-	4, // 2: transfer.FileTransfer.HealthCheck:input_type -> transfer.HealthCheckRequest
-	1, // 3: transfer.FileTransfer.TransferFile:output_type -> transfer.TransferStatus
-	3, // 4: transfer.FileTransfer.GetPeerInfo:output_type -> transfer.PeerInfoResponse
-	5, // 5: transfer.FileTransfer.HealthCheck:output_type -> transfer.HealthCheckResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	0, // 0: transfer.FileTransfer.Transfer:input_type -> transfer.FileChunk
+	2, // 1: transfer.FileTransfer.DeleteFile:input_type -> transfer.DeleteRequest
+	1, // 2: transfer.FileTransfer.Transfer:output_type -> transfer.TransferResponse
+	3, // 3: transfer.FileTransfer.DeleteFile:output_type -> transfer.DeleteResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -478,7 +330,7 @@ func file_api_proto_transfer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_transfer_proto_rawDesc), len(file_api_proto_transfer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

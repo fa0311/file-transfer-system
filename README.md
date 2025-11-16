@@ -154,23 +154,28 @@ docker-compose down
 
 **Endpoint:** `POST /transfer`
 
+**Path Prefix (Required):**
+
+- `local:` - Refers to the local server (the server receiving the HTTP request)
+- `peer:` - Refers to the peer server (the target server)
+
 **Request Examples:**
 
 ```bash
-# Transfer a single file
+# Transfer a single file from local to peer (explicit)
 curl -X POST http://server-a:8080/transfer \
   -H "Content-Type: application/json" \
   -d '{
-    "source_path": "/data/video.mp4",
-    "dest_path": "/data/received/"
+    "source_path": "local:/data/video.mp4",
+    "dest_path": "peer:/data/received/"
   }'
 
 # Transfer multiple files with wildcards
 curl -X POST http://server-a:8080/transfer \
   -H "Content-Type: application/json" \
   -d '{
-    "source_path": "/data/videos/*.mp4",
-    "dest_path": "/data/received/"
+    "source_path": "local:/data/videos/*.mp4",
+    "dest_path": "peer:/data/received/"
   }'
 ```
 
@@ -182,6 +187,54 @@ Returns real-time progress in JSONL (JSON Lines) format:
 {"type":"info","message":"Transfer started","time":"2024-11-16T18:30:00Z"}
 {"type":"progress","message":"Transferring...","time":"2024-11-16T18:30:01Z"}
 {"type":"completed","message":"Transfer completed successfully","time":"2024-11-16T18:30:10Z"}
+```
+
+### File Deletion Request
+
+**Endpoint:** `POST /delete` or `DELETE /delete`
+
+**Path Prefix (Required):**
+
+- `local:` - Delete file on the local server
+- `peer:` - Delete file on the peer server
+
+**Request Examples:**
+
+```bash
+# Delete a file on the local server
+curl -X POST http://server-a:8080/delete \
+  -H "Content-Type: application/json" \
+  -d '{
+    "file_path": "local:/data/old-file.mp4"
+  }'
+
+# Delete a file on the peer server (explicit)
+curl -X POST http://server-a:8080/delete \
+  -H "Content-Type: application/json" \
+  -d '{
+    "file_path": "peer:/data/old-file.mp4"
+  }'
+
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "File deleted successfully",
+  "target": "local"
+}
+```
+
+**Error Response:**
+
+```json
+{
+  "success": false,
+  "message": "Failed to delete file: file does not exist",
+  "target": "peer"
+}
 ```
 
 ### Health Check

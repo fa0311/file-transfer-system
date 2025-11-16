@@ -19,23 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FileTransfer_TransferFile_FullMethodName = "/transfer.FileTransfer/TransferFile"
-	FileTransfer_GetPeerInfo_FullMethodName  = "/transfer.FileTransfer/GetPeerInfo"
-	FileTransfer_HealthCheck_FullMethodName  = "/transfer.FileTransfer/HealthCheck"
+	FileTransfer_Transfer_FullMethodName   = "/transfer.FileTransfer/Transfer"
+	FileTransfer_DeleteFile_FullMethodName = "/transfer.FileTransfer/DeleteFile"
 )
 
 // FileTransferClient is the client API for FileTransfer service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// FileTransfer service for transferring files between servers
 type FileTransferClient interface {
-	// Transfer file in streaming mode
-	TransferFile(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[FileChunk, TransferStatus], error)
-	// Get peer server information for startup verification
-	GetPeerInfo(ctx context.Context, in *PeerInfoRequest, opts ...grpc.CallOption) (*PeerInfoResponse, error)
-	// Health check
-	HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
+	Transfer(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[FileChunk, TransferResponse], error)
+	DeleteFile(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 }
 
 type fileTransferClient struct {
@@ -46,33 +39,23 @@ func NewFileTransferClient(cc grpc.ClientConnInterface) FileTransferClient {
 	return &fileTransferClient{cc}
 }
 
-func (c *fileTransferClient) TransferFile(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[FileChunk, TransferStatus], error) {
+func (c *fileTransferClient) Transfer(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[FileChunk, TransferResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &FileTransfer_ServiceDesc.Streams[0], FileTransfer_TransferFile_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &FileTransfer_ServiceDesc.Streams[0], FileTransfer_Transfer_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[FileChunk, TransferStatus]{ClientStream: stream}
+	x := &grpc.GenericClientStream[FileChunk, TransferResponse]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FileTransfer_TransferFileClient = grpc.BidiStreamingClient[FileChunk, TransferStatus]
+type FileTransfer_TransferClient = grpc.BidiStreamingClient[FileChunk, TransferResponse]
 
-func (c *fileTransferClient) GetPeerInfo(ctx context.Context, in *PeerInfoRequest, opts ...grpc.CallOption) (*PeerInfoResponse, error) {
+func (c *fileTransferClient) DeleteFile(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PeerInfoResponse)
-	err := c.cc.Invoke(ctx, FileTransfer_GetPeerInfo_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *fileTransferClient) HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(HealthCheckResponse)
-	err := c.cc.Invoke(ctx, FileTransfer_HealthCheck_FullMethodName, in, out, cOpts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, FileTransfer_DeleteFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,15 +65,9 @@ func (c *fileTransferClient) HealthCheck(ctx context.Context, in *HealthCheckReq
 // FileTransferServer is the server API for FileTransfer service.
 // All implementations must embed UnimplementedFileTransferServer
 // for forward compatibility.
-//
-// FileTransfer service for transferring files between servers
 type FileTransferServer interface {
-	// Transfer file in streaming mode
-	TransferFile(grpc.BidiStreamingServer[FileChunk, TransferStatus]) error
-	// Get peer server information for startup verification
-	GetPeerInfo(context.Context, *PeerInfoRequest) (*PeerInfoResponse, error)
-	// Health check
-	HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
+	Transfer(grpc.BidiStreamingServer[FileChunk, TransferResponse]) error
+	DeleteFile(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	mustEmbedUnimplementedFileTransferServer()
 }
 
@@ -101,14 +78,11 @@ type FileTransferServer interface {
 // pointer dereference when methods are called.
 type UnimplementedFileTransferServer struct{}
 
-func (UnimplementedFileTransferServer) TransferFile(grpc.BidiStreamingServer[FileChunk, TransferStatus]) error {
-	return status.Errorf(codes.Unimplemented, "method TransferFile not implemented")
+func (UnimplementedFileTransferServer) Transfer(grpc.BidiStreamingServer[FileChunk, TransferResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method Transfer not implemented")
 }
-func (UnimplementedFileTransferServer) GetPeerInfo(context.Context, *PeerInfoRequest) (*PeerInfoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPeerInfo not implemented")
-}
-func (UnimplementedFileTransferServer) HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method HealthCheck not implemented")
+func (UnimplementedFileTransferServer) DeleteFile(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteFile not implemented")
 }
 func (UnimplementedFileTransferServer) mustEmbedUnimplementedFileTransferServer() {}
 func (UnimplementedFileTransferServer) testEmbeddedByValue()                      {}
@@ -131,45 +105,27 @@ func RegisterFileTransferServer(s grpc.ServiceRegistrar, srv FileTransferServer)
 	s.RegisterService(&FileTransfer_ServiceDesc, srv)
 }
 
-func _FileTransfer_TransferFile_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(FileTransferServer).TransferFile(&grpc.GenericServerStream[FileChunk, TransferStatus]{ServerStream: stream})
+func _FileTransfer_Transfer_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(FileTransferServer).Transfer(&grpc.GenericServerStream[FileChunk, TransferResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FileTransfer_TransferFileServer = grpc.BidiStreamingServer[FileChunk, TransferStatus]
+type FileTransfer_TransferServer = grpc.BidiStreamingServer[FileChunk, TransferResponse]
 
-func _FileTransfer_GetPeerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PeerInfoRequest)
+func _FileTransfer_DeleteFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FileTransferServer).GetPeerInfo(ctx, in)
+		return srv.(FileTransferServer).DeleteFile(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FileTransfer_GetPeerInfo_FullMethodName,
+		FullMethod: FileTransfer_DeleteFile_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FileTransferServer).GetPeerInfo(ctx, req.(*PeerInfoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _FileTransfer_HealthCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HealthCheckRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(FileTransferServer).HealthCheck(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: FileTransfer_HealthCheck_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FileTransferServer).HealthCheck(ctx, req.(*HealthCheckRequest))
+		return srv.(FileTransferServer).DeleteFile(ctx, req.(*DeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -182,18 +138,14 @@ var FileTransfer_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*FileTransferServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetPeerInfo",
-			Handler:    _FileTransfer_GetPeerInfo_Handler,
-		},
-		{
-			MethodName: "HealthCheck",
-			Handler:    _FileTransfer_HealthCheck_Handler,
+			MethodName: "DeleteFile",
+			Handler:    _FileTransfer_DeleteFile_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "TransferFile",
-			Handler:       _FileTransfer_TransferFile_Handler,
+			StreamName:    "Transfer",
+			Handler:       _FileTransfer_Transfer_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
