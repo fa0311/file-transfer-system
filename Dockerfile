@@ -38,10 +38,6 @@ COPY --from=builder /build/server .
 # Create data directory
 RUN mkdir -p /data
 
-# Environment variables (can be overridden at runtime)
-ENV GRPC_LISTEN_ADDR=0.0.0.0:50051 \
-    HTTP_LISTEN_ADDR=0.0.0.0:8080
-
 EXPOSE 50051 8080
 
 CMD ["./server"]

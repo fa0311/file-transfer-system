@@ -5,8 +5,6 @@ services:
     image: ghcr.io/fa0311/file-transfer-system/file-transfer-server:latest
     container_name: file-transfer-server-a
     environment:
-      - GRPC_LISTEN_ADDR=0.0.0.0:50051
-      - HTTP_LISTEN_ADDR=0.0.0.0:8080
       - TARGET_SERVER=server-b:50051
       - ALLOWED_DIR=/data
     volumes:
@@ -27,8 +25,6 @@ services:
     image: ghcr.io/your-org/file-transfer-server:latest
     container_name: file-transfer-server-b
     environment:
-      - GRPC_LISTEN_ADDR=0.0.0.0:50051
-      - HTTP_LISTEN_ADDR=0.0.0.0:8080
       - TARGET_SERVER=server-a:50051
       - ALLOWED_DIR=/data
     volumes:
