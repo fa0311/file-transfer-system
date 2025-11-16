@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  server-a:
+    image: ghcr.io/your-org/file-transfer-server:latest
+    container_name: file-transfer-server-a
+    environment:
+      - GRPC_LISTEN_ADDR=0.0.0.0:50051
+      - HTTP_LISTEN_ADDR=0.0.0.0:8080
+      - TARGET_SERVER=server-b:50051
+      - ALLOWED_DIR=/data
+    volumes:
+      - ./data-a:/data
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    networks:
+      - transfer-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  server-b:
+    image: ghcr.io/your-org/file-transfer-server:latest
+    container_name: file-transfer-server-b
+    environment:
+      - GRPC_LISTEN_ADDR=0.0.0.0:50051
+      - HTTP_LISTEN_ADDR=0.0.0.0:8080
+      - TARGET_SERVER=server-a:50051
+      - ALLOWED_DIR=/data
+    volumes:
+      - ./data-b:/data
+    ports:
+      - "8081:8080"
+      - "50052:50051"
+    networks:
+      - transfer-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  transfer-network:
