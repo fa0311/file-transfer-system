@@ -23,7 +23,7 @@ RUN protoc --go_out=. --go_opt=paths=source_relative \
     api/proto/transfer.proto
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server .
 
 # Runtime stage
 FROM alpine:latest
