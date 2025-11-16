@@ -23,13 +23,15 @@ func (v *PathValidator) ValidatePath(path string) (string, error) {
 		return "", fmt.Errorf("path contains invalid characters: ..")
 	}
 
+	// Require absolute paths starting with /
+	if !strings.HasPrefix(path, "/") {
+		return "", fmt.Errorf("relative paths are not allowed, use absolute paths starting with /")
+	}
+
 	// Clean the path
 	cleanPath := filepath.Clean(path)
 	
-	// Remove leading slash to treat as relative path
-	cleanPath = strings.TrimPrefix(cleanPath, "/")
-	
-	// Always treat paths relative to allowed directory
+	// Build path relative to allowed directory
 	absPath := filepath.Join(v.allowedDir, cleanPath)
 
 	// Resolve any symlinks

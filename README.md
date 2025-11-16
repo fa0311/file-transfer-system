@@ -54,7 +54,7 @@ protoc --go_out=. --go_opt=paths=source_relative \
        api/proto/transfer.proto
 
 # Build
-go build -o server ./cmd/server
+go build -o server .
 ```
 
 ### Docker Build
@@ -159,10 +159,20 @@ docker-compose down
 - `local:` - Refers to the local server (the server receiving the HTTP request)
 - `peer:` - Refers to the peer server (the target server)
 
+**Path Specification:**
+
+All paths must be absolute paths starting with `/`. Relative paths are rejected for security reasons.
+
+- **Single file:** `/file.txt`
+- **Wildcard:** `/videos/*.mp4` - All files matching pattern
+- **Directory with `/*`:** `/videos/*` - All files in directory (non-recursive)
+- **Directory with `/.`:** `/videos/.` - All files in directory and subdirectories recursively
+- **Directory path:** `/videos` - Automatically expands to all files recursively
+
 **Request Examples:**
 
 ```bash
-# Transfer a single file from local to peer (explicit)
+# Transfer a single file from local to peer
 curl -X POST http://server-a:8080/transfer \
   -H "Content-Type: application/json" \
   -d '{
@@ -176,6 +186,30 @@ curl -X POST http://server-a:8080/transfer \
   -d '{
     "source_path": "local:/data/videos/*.mp4",
     "dest_path": "peer:/data/received/"
+  }'
+
+# Transfer all files in directory (non-recursive)
+curl -X POST http://server-a:8080/transfer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_path": "local:/data/videos/*",
+    "dest_path": "peer:/data/backup/"
+  }'
+
+# Transfer entire directory recursively (including subdirectories)
+curl -X POST http://server-a:8080/transfer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_path": "local:/data/videos/.",
+    "dest_path": "peer:/data/backup/"
+  }'
+
+# Transfer directory (auto-recursive)
+curl -X POST http://server-a:8080/transfer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_path": "local:/data/videos",
+    "dest_path": "peer:/data/backup/"
   }'
 ```
 
@@ -256,14 +290,21 @@ curl http://server-a:8080/health
 
 ## Security Features
 
-1. **Path Traversal Attack Prevention**
+1. **Absolute Path Requirement**
+
+   - Only absolute paths starting with `/` are accepted
+   - Relative paths are rejected to prevent security risks
+   - Example: `/data/file.txt` ✓ | `data/file.txt` ✗
+
+2. **Path Traversal Attack Prevention**
 
    - All file paths are restricted within `ALLOWED_DIR`
    - Rejects malicious paths containing `..`
+   - Symlinks are validated to stay within allowed directory
 
-2. **Checksum Verification**
+3. **Checksum Verification**
    - Verifies SHA256 checksum for each chunk transfer
-   - Ensures data integrity
+   - Ensures data integrity during transfer
 
 ## Technical Specifications
 

@@ -434,20 +434,60 @@ func (s *Server) expandWildcard(pattern string) ([]string, error) {
 		return nil, err
 	}
 
+	// Handle directory with /. (all contents including hidden files)
+	if strings.HasSuffix(pattern, "/.") {
+		dirPath := strings.TrimSuffix(validPattern, "/.")
+		return s.listDirContents(dirPath)
+	}
+
+	// Handle directory with /* (all files in directory)
+	if strings.HasSuffix(pattern, "/*") {
+		return filepath.Glob(validPattern)
+	}
+
 	matches, err := filepath.Glob(validPattern)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(matches) == 0 {
-		// If no matches and no wildcard, treat as single file
+		// If no matches and no wildcard, treat as single file or directory
 		if !strings.Contains(pattern, "*") {
+			info, err := os.Stat(validPattern)
+			if err == nil && info.IsDir() {
+				// If it's a directory, get all files in it
+				return s.listDirContents(validPattern)
+			}
 			return []string{validPattern}, nil
 		}
 		return nil, fmt.Errorf("no files match pattern: %s", pattern)
 	}
 
 	return matches, nil
+}
+
+func (s *Server) listDirContents(dirPath string) ([]string, error) {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var files []string
+	for _, entry := range entries {
+		fullPath := filepath.Join(dirPath, entry.Name())
+		if entry.IsDir() {
+			// Recursively get files from subdirectories
+			subFiles, err := s.listDirContents(fullPath)
+			if err != nil {
+				return nil, err
+			}
+			files = append(files, subFiles...)
+		} else {
+			files = append(files, fullPath)
+		}
+	}
+
+	return files, nil
 }
 
 func (s *Server) sendFile(client pb.FileTransferClient, srcPath, destPath string) error {
