@@ -345,12 +345,8 @@ func parsePathPrefix(path string) (string, string) {
 }
 
 func (s *Server) connectToPeer() (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, s.config.TargetServer,
+	conn, err := grpc.NewClient(s.config.TargetServer,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to peer: %w", err)
