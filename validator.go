@@ -20,7 +20,7 @@ func NewPathValidator(allowedDir string) *PathValidator {
 func (v *PathValidator) ValidatePath(path string) (string, error) {
 	// Remove any potential path traversal attempts
 	if strings.Contains(path, "..") {
-		return "", fmt.Errorf("path contains invalid characters: ..")
+		return "", fmt.Errorf("path contains invalid characters")
 	}
 
 	// Require absolute paths starting with /

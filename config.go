@@ -54,7 +54,7 @@ func LoadConfig() (*Config, error) {
 	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
 		return nil, fmt.Errorf("ALLOWED_DIR is not writable: %w", err)
 	}
-	os.Remove(testFile)
+	_ = os.Remove(testFile) // Ignore error on cleanup
 
 	return &Config{
 		GRPCListenAddr: grpcAddr,

@@ -84,7 +84,7 @@ func startHTTPServer(server *Server, addr string) error {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":    "healthy",
 		"timestamp": time.Now().Format(time.RFC3339),
 	})
@@ -113,7 +113,7 @@ func (s *Server) handleTransfer(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	
 	writeProgress := func(msgType, message string) {
-		encoder.Encode(ProgressMessage{
+		_ = encoder.Encode(ProgressMessage{
 			Type:    msgType,
 			Message: message,
 			Time:    time.Now().Format(time.RFC3339),
@@ -201,7 +201,7 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 			respondJSON(w, false, fmt.Sprintf("Failed to connect to peer: %v", err), "peer")
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		client := pb.NewFileTransferClient(conn)
 		resp, err := client.DeleteFile(context.Background(), &pb.DeleteRequest{FilePath: path})
@@ -222,7 +222,7 @@ func respondJSON(w http.ResponseWriter, success bool, message, target string) {
 	if target != "" {
 		response["target"] = target
 	}
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // gRPC server implementation
@@ -234,7 +234,7 @@ func (s *Server) Transfer(stream pb.FileTransfer_TransferServer) error {
 
 	defer func() {
 		if currentFile != nil {
-			currentFile.Close()
+			_ = currentFile.Close()
 			log.Printf("Transfer complete: received %d bytes, saved to %s", receivedBytes, currentPath)
 		}
 	}()
@@ -251,12 +251,12 @@ func (s *Server) Transfer(stream pb.FileTransfer_TransferServer) error {
 		// Validate and open file if first chunk or if file path changed
 		if currentFile == nil || currentRequestedPath != chunk.FilePath {
 			if currentFile != nil {
-				currentFile.Close()
+				_ = currentFile.Close()
 			}
 
 			validPath, err := s.validator.ValidateAndEnsureDir(chunk.FilePath)
 			if err != nil {
-				stream.Send(&pb.TransferResponse{
+				_ = stream.Send(&pb.TransferResponse{
 					Success: false,
 					Message: fmt.Sprintf("Path validation failed: %v", err),
 				})
@@ -267,7 +267,7 @@ func (s *Server) Transfer(stream pb.FileTransfer_TransferServer) error {
 			currentPath = validPath
 			currentFile, err = os.Create(validPath)
 			if err != nil {
-				stream.Send(&pb.TransferResponse{
+				_ = stream.Send(&pb.TransferResponse{
 					Success: false,
 					Message: fmt.Sprintf("Failed to create file: %v", err),
 				})
@@ -280,7 +280,7 @@ func (s *Server) Transfer(stream pb.FileTransfer_TransferServer) error {
 		hash := sha256.Sum256(chunk.Data)
 		checksum := hex.EncodeToString(hash[:])
 		if checksum != chunk.Checksum {
-			stream.Send(&pb.TransferResponse{
+			_ = stream.Send(&pb.TransferResponse{
 				Success: false,
 				Message: "Checksum mismatch",
 			})
@@ -290,7 +290,7 @@ func (s *Server) Transfer(stream pb.FileTransfer_TransferServer) error {
 		// Write data
 		n, err := currentFile.Write(chunk.Data)
 		if err != nil {
-			stream.Send(&pb.TransferResponse{
+			_ = stream.Send(&pb.TransferResponse{
 				Success: false,
 				Message: fmt.Sprintf("Failed to write file: %v", err),
 			})
@@ -299,7 +299,7 @@ func (s *Server) Transfer(stream pb.FileTransfer_TransferServer) error {
 		receivedBytes += int64(n)
 
 		// Send progress
-		stream.Send(&pb.TransferResponse{
+		_ = stream.Send(&pb.TransferResponse{
 			Success:          true,
 			Message:          "Chunk received",
 			BytesTransferred: receivedBytes,
@@ -369,7 +369,7 @@ func (s *Server) transferLocalToPeer(sourcePath, destPath string, writeProgress 
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	client := pb.NewFileTransferClient(conn)
 
@@ -495,7 +495,7 @@ func (s *Server) sendFile(client pb.FileTransferClient, srcPath, destPath string
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	stat, err := file.Stat()
 	if err != nil {
@@ -505,6 +505,47 @@ func (s *Server) sendFile(client pb.FileTransferClient, srcPath, destPath string
 	stream, err := client.Transfer(context.Background())
 	if err != nil {
 		return err
+	}
+
+	// Handle empty files (0 bytes)
+	if stat.Size() == 0 {
+		// Send a single empty chunk to create the file
+		hash := sha256.Sum256([]byte{})
+		checksum := hex.EncodeToString(hash[:])
+
+		chunk := &pb.FileChunk{
+			FilePath:  destPath,
+			Data:      []byte{},
+			Offset:    0,
+			TotalSize: 0,
+			Checksum:  checksum,
+			IsLast:    true,
+		}
+
+		if err := stream.Send(chunk); err != nil {
+			return err
+		}
+
+		if _, recvErr := stream.Recv(); recvErr != nil && recvErr != io.EOF {
+			return recvErr
+		}
+
+		if err := stream.CloseSend(); err != nil {
+			return err
+		}
+
+		// Wait for final response
+		for {
+			_, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 
 	buffer := make([]byte, ChunkSize)
@@ -571,13 +612,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
+	defer func() { _ = sourceFile.Close() }()
 
 	destFile, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer destFile.Close()
+	defer func() { _ = destFile.Close() }()
 
 	_, err = io.Copy(destFile, sourceFile)
 	return err

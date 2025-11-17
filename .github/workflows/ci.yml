@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches:
+        - master
+  pull_request:
+    branches:
+        - master
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Build
+        run: go build -v -o server .
+
+      - name: Unit Tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+        continue-on-error: true
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: false
+
+      - name: Setup E2E
+        run: |
+          mkdir -p data-a data-b
+          chmod +x server
+
+      - name: E2E Tests
+        run: bash test.sh
+
+      - name: Upload Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: /tmp/server-*.log
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: file-transfer-server:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
