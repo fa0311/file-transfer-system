@@ -217,6 +217,31 @@ Health check endpoint.
 
 - `200 OK`: Server is healthy
 
+## Error Handling
+
+### Incomplete File Cleanup
+
+If a file transfer fails or is interrupted:
+
+- **Automatic Cleanup**: Incomplete files are automatically deleted on the receiving server
+- **No Partial Files**: Failed transfers will not leave partial files on disk
+- **Retry Safe**: You can safely retry failed transfers without manual cleanup
+
+### Health Check
+
+The server provides a health check endpoint:
+
+```bash
+curl http://localhost:8080/health
+# Response: OK (200)
+```
+
+This endpoint can be used for:
+
+- Container health checks (Docker/Kubernetes)
+- Load balancer health probes
+- Monitoring systems
+
 ## Security
 
 - Path traversal protection (blocks `..` and absolute paths)

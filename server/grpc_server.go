@@ -55,7 +55,16 @@ func (s *FileTransferServer) Transfer(stream pb.FileTransfer_TransferServer) err
 	if err != nil {
 		return status.Errorf(codes.Internal, "failed to create file: %v", err)
 	}
-	defer file.Close()
+	
+	// Track transfer success
+	transferSuccess := false
+	defer func() {
+		file.Close()
+		// Delete incomplete file on error
+		if !transferSuccess {
+			os.Remove(targetPath)
+		}
+	}()
 
 	// Send progress
 	if err := stream.Send(&pb.TransferResponse{
@@ -112,6 +121,8 @@ func (s *FileTransferServer) Transfer(stream pb.FileTransfer_TransferServer) err
 				return err
 			}
 
+			// Mark transfer as successful
+			transferSuccess = true
 			return nil
 		} else {
 			return status.Errorf(codes.InvalidArgument, "unexpected message type")
