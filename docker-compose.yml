@@ -1,45 +1,39 @@
-version: "3.8"
+version: '3.8'
 
 services:
   server-a:
     image: ghcr.io/fa0311/file-transfer-system/file-transfer-server:latest
     container_name: file-transfer-server-a
     environment:
-      - TARGET_SERVER=server-b:50051
-      - ALLOWED_DIR=/data
-    volumes:
-      - ./data-a:/data
+      - PEER_SERVER_ADDR=server-b:50051
+      - ROOT_DIR=/data
+      - HTTP_PORT=8080
+      - GRPC_PORT=50051
     ports:
       - "8080:8080"
       - "50051:50051"
-    networks:
-      - transfer-network
+    volumes:
+      - ./data/server-a:/data
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    networks:
+      - file-transfer-net
 
   server-b:
-    image: ghcr.io/your-org/file-transfer-server:latest
+    image: ghcr.io/fa0311/file-transfer-system/file-transfer-server:latest
     container_name: file-transfer-server-b
     environment:
-      - TARGET_SERVER=server-a:50051
-      - ALLOWED_DIR=/data
-    volumes:
-      - ./data-b:/data
+      - PEER_SERVER_ADDR=server-a:50051
+      - ROOT_DIR=/data
+      - HTTP_PORT=8081
+      - GRPC_PORT=50052
     ports:
-      - "8081:8080"
-      - "50052:50051"
-    networks:
-      - transfer-network
+      - "8081:8081"
+      - "50052:50052"
+    volumes:
+      - ./data/server-b:/data
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    networks:
+      - file-transfer-net
 
 networks:
-  transfer-network:
+  file-transfer-net:

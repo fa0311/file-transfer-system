@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package transfer;
+
+option go_package = "github.com/fa0311/file-transfer-system/proto;transfer";
+
+service FileTransfer {
+  rpc Transfer(stream TransferRequest) returns (stream TransferResponse) {}
+}
+
+message TransferRequest {
+  oneof payload {
+    TransferMetadata metadata = 1;
+    FileChunk chunk = 2;
+    TransferComplete complete = 3;
+  }
+}
+
+message TransferMetadata {
+  string file_path = 1;
+  int64 file_size = 2;
+}
+
+message FileChunk {
+  bytes data = 1;
+}
+
+message TransferComplete {
+  int64 bytes_transferred = 1;
+}
+
+message TransferResponse {
+  bool success = 1;
+  string message = 2;
+  int64 bytes_received = 3;
+}

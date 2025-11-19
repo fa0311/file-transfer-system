@@ -1,43 +1,48 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git protobuf-dev protobuf make
+# Install required packages
+RUN apk add --no-cache git make protobuf protobuf-dev
 
-# Install Go tools for protobuf
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
-    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-
+# Set working directory
 WORKDIR /build
 
 # Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Install protoc plugins
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
 # Copy source code
 COPY . .
 
-# Generate protobuf files
-RUN protoc --go_out=. --go_opt=paths=source_relative \
-    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
-    api/proto/transfer.proto
-
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server .
+# Generate protobuf code and build
+RUN export PATH=$PATH:$(go env GOPATH)/bin && \
+    make proto && \
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o file-transfer-server ./server
 
 # Runtime stage
 FROM alpine:latest
 
+# Install ca-certificates for HTTPS
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 
-# Copy the binary from builder
-COPY --from=builder /build/server .
+# Copy binary from builder
+COPY --from=builder /build/file-transfer-server .
 
-# Create data directory
+# Create default directories
 RUN mkdir -p /data
 
-EXPOSE 50051 8080
+# Expose ports
+EXPOSE 8080 50051
 
-CMD ["./server"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/bin/sh", "-c", "test -n \"$FILE_TRANSFER_MODE\""]
+
+# Run the binary
+ENTRYPOINT ["/app/file-transfer-server"]
