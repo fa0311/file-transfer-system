@@ -82,15 +82,6 @@ func TestFileTransferServer_Transfer_Success(t *testing.T) {
 		t.Fatalf("Failed to send metadata: %v", err)
 	}
 
-	// Receive metadata response
-	resp, err := stream.Recv()
-	if err != nil {
-		t.Fatalf("Failed to receive metadata response: %v", err)
-	}
-	if !resp.Success {
-		t.Fatalf("Metadata response unsuccessful: %s", resp.Message)
-	}
-
 	// Send chunk
 	err = stream.Send(&pb.TransferRequest{
 		Payload: &pb.TransferRequest_Chunk{
@@ -101,15 +92,6 @@ func TestFileTransferServer_Transfer_Success(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Failed to send chunk: %v", err)
-	}
-
-	// Receive chunk response
-	resp, err = stream.Recv()
-	if err != nil {
-		t.Fatalf("Failed to receive chunk response: %v", err)
-	}
-	if !resp.Success {
-		t.Fatalf("Chunk response unsuccessful: %s", resp.Message)
 	}
 
 	// Send completion
@@ -124,8 +106,11 @@ func TestFileTransferServer_Transfer_Success(t *testing.T) {
 		t.Fatalf("Failed to send completion: %v", err)
 	}
 
-	// Receive final response
-	resp, err = stream.Recv()
+	// Close send side
+	stream.CloseSend()
+
+	// Receive final response (only response from server)
+	resp, err := stream.Recv()
 	if err != nil {
 		t.Fatalf("Failed to receive final response: %v", err)
 	}
@@ -268,8 +253,6 @@ func TestFileTransferServer_Transfer_ByteMismatch(t *testing.T) {
 		t.Fatalf("Failed to send metadata: %v", err)
 	}
 
-	stream.Recv() // Receive metadata response
-
 	// Send chunk
 	err = stream.Send(&pb.TransferRequest{
 		Payload: &pb.TransferRequest_Chunk{
@@ -282,8 +265,6 @@ func TestFileTransferServer_Transfer_ByteMismatch(t *testing.T) {
 		t.Fatalf("Failed to send chunk: %v", err)
 	}
 
-	stream.Recv() // Receive chunk response
-
 	// Send completion with wrong byte count
 	err = stream.Send(&pb.TransferRequest{
 		Payload: &pb.TransferRequest_Complete{
@@ -295,6 +276,9 @@ func TestFileTransferServer_Transfer_ByteMismatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send completion: %v", err)
 	}
+
+	// Close send side
+	stream.CloseSend()
 
 	// Should receive error
 	_, err = stream.Recv()

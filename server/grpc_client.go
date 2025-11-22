@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	ChunkSize = 1024 * 1024 // 1MB chunks for optimal network performance
+	ChunkSize        = 8 * 1024 * 1024 // 8MB chunks for optimal network performance
+	ProgressInterval = time.Second      // Progress update interval
 )
 
 type TransferProgress struct {
@@ -50,9 +51,13 @@ func TransferFile(ctx context.Context, peerAddr, sourcePath, targetPath, rootDir
 	conn, err := grpc.Dial(peerAddr, 
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(10 * 1024 * 1024),
-			grpc.MaxCallSendMsgSize(10 * 1024 * 1024),
+			grpc.MaxCallRecvMsgSize(16 * 1024 * 1024),
+			grpc.MaxCallSendMsgSize(16 * 1024 * 1024),
 		),
+		grpc.WithInitialWindowSize(1 << 30),     // 1GB initial window
+		grpc.WithInitialConnWindowSize(1 << 30), // 1GB connection window
+		grpc.WithWriteBufferSize(1 << 20),       // 1MB write buffer
+		grpc.WithReadBufferSize(1 << 20),        // 1MB read buffer
 	)
 	if err != nil {
 		return fmt.Errorf("failed to connect to peer server: %v", err)
@@ -75,15 +80,6 @@ func TransferFile(ctx context.Context, peerAddr, sourcePath, targetPath, rootDir
 		},
 	}); err != nil {
 		return fmt.Errorf("failed to send metadata: %v", err)
-	}
-
-	// Receive metadata response
-	resp, err := stream.Recv()
-	if err != nil {
-		return fmt.Errorf("failed to receive metadata response: %v", err)
-	}
-	if !resp.Success {
-		return fmt.Errorf("metadata rejected: %s", resp.Message)
 	}
 
 	progressChan <- TransferProgress{
@@ -113,7 +109,7 @@ func TransferFile(ctx context.Context, peerAddr, sourcePath, targetPath, rootDir
 			break
 		}
 
-		// Send chunk
+		// Send chunk without waiting for response
 		if err := stream.Send(&pb.TransferRequest{
 			Payload: &pb.TransferRequest_Chunk{
 				Chunk: &pb.FileChunk{
@@ -126,21 +122,12 @@ func TransferFile(ctx context.Context, peerAddr, sourcePath, targetPath, rootDir
 
 		bytesTransferred += int64(n)
 
-		// Receive chunk response
-		resp, err := stream.Recv()
-		if err != nil {
-			return fmt.Errorf("failed to receive chunk response: %v", err)
-		}
-		if !resp.Success {
-			return fmt.Errorf("chunk transfer failed: %s", resp.Message)
-		}
-
-		// Send progress update every second
-		if time.Since(lastProgressTime) >= time.Second {
+		// Send local progress update
+		if time.Since(lastProgressTime) >= ProgressInterval {
 			progressChan <- TransferProgress{
 				BytesTransferred: bytesTransferred,
 				TotalBytes:       fileSize,
-				Message:          resp.Message,
+				Message:          fmt.Sprintf("sending: %.2f%%", float64(bytesTransferred)/float64(fileSize)*100),
 				Timestamp:        time.Now(),
 			}
 			lastProgressTime = time.Now()
@@ -158,18 +145,18 @@ func TransferFile(ctx context.Context, peerAddr, sourcePath, targetPath, rootDir
 		return fmt.Errorf("failed to send completion: %v", err)
 	}
 
-	// Receive final response
-	resp, err = stream.Recv()
+	// Close send side
+	if err := stream.CloseSend(); err != nil {
+		return fmt.Errorf("failed to close send stream: %v", err)
+	}
+
+	// Wait for final response from server
+	resp, err := stream.Recv()
 	if err != nil {
 		return fmt.Errorf("failed to receive final response: %v", err)
 	}
 	if !resp.Success {
 		return fmt.Errorf("transfer failed: %s", resp.Message)
-	}
-
-	// Close stream
-	if err := stream.CloseSend(); err != nil {
-		return fmt.Errorf("failed to close send stream: %v", err)
 	}
 
 	progressChan <- TransferProgress{

@@ -43,7 +43,6 @@ func (s *FileTransferServer) Transfer(stream pb.FileTransfer_TransferServer) err
 	}
 
 	targetPath := filepath.Join(s.rootDir, cleanPath)
-	expectedSize := metadata.Metadata.FileSize
 
 	// Create directory
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
@@ -66,16 +65,7 @@ func (s *FileTransferServer) Transfer(stream pb.FileTransfer_TransferServer) err
 		}
 	}()
 
-	// Send progress
-	if err := stream.Send(&pb.TransferResponse{
-		Success:       true,
-		Message:       "file created",
-		BytesReceived: 0,
-	}); err != nil {
-		return err
-	}
-
-	// Step 2: Receive chunks
+	// Step 2: Receive chunks without sending progress responses
 	bytesReceived := int64(0)
 	for {
 		req, err := stream.Recv()
@@ -92,15 +82,6 @@ func (s *FileTransferServer) Transfer(stream pb.FileTransfer_TransferServer) err
 			}
 
 			bytesReceived += int64(n)
-
-			// Send progress
-			if err := stream.Send(&pb.TransferResponse{
-				Success:       true,
-				Message:       fmt.Sprintf("receiving: %.2f%%", float64(bytesReceived)/float64(expectedSize)*100),
-				BytesReceived: bytesReceived,
-			}); err != nil {
-				return err
-			}
 		} else if complete, ok := req.Payload.(*pb.TransferRequest_Complete); ok {
 			// Step 3: Verify completion
 			if bytesReceived != complete.Complete.BytesTransferred {
@@ -137,8 +118,8 @@ func StartGRPCServer(ctx context.Context, port, rootDir string) error {
 	}
 
 	grpcServer := grpc.NewServer(
-		grpc.MaxRecvMsgSize(10 * 1024 * 1024), // 10MB
-		grpc.MaxSendMsgSize(10 * 1024 * 1024), // 10MB
+		grpc.MaxRecvMsgSize(16 * 1024 * 1024), // 16MB
+		grpc.MaxSendMsgSize(16 * 1024 * 1024), // 16MB
 	)
 
 	pb.RegisterFileTransferServer(grpcServer, NewFileTransferServer(rootDir))
