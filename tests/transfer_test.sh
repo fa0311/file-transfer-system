@@ -12,17 +12,13 @@ NC='\033[0m'
 # Configuration
 PEER_SERVER="192.168.70.3:50051"
 LOCAL_DIR="/tmp/transfer-test"
-FILE_SIZE_GB=1
+FILE_SIZE_GB=10
 HTTP_PORT=8080
 GRPC_PORT=50052
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  10GB File Transfer Test${NC}"
+echo -e "${BLUE}  ${FILE_SIZE_GB}GB File Transfer Test${NC}"
 echo -e "${BLUE}========================================${NC}"
-echo ""
-echo "Target Server: ${PEER_SERVER}"
-echo "File Size: ${FILE_SIZE_GB}GB"
-echo ""
 
 # Cleanup function
 cleanup() {
@@ -80,12 +76,10 @@ echo -e "${GREEN}Server started successfully${NC}"
 echo ""
 
 # Step 5: Transfer file
-RESPONSE_LOG="${LOCAL_DIR}/transfer_response.ndjson"
 REQUEST_BODY="{\"source\":\"test-${FILE_SIZE_GB}gb.bin\",\"target\":\"test-${FILE_SIZE_GB}gb.bin\"}"
 
 echo -e "${GREEN}[5/5]${NC} Transferring ${FILE_SIZE_GB}GB file..."
 echo "This will take a while..."
-echo "Saving response to: ${RESPONSE_LOG}"
 echo ""
 echo "Request URL: http://localhost:${HTTP_PORT}/transfer"
 echo "Request Method: POST"
@@ -96,7 +90,34 @@ echo ""
 
 START_TIME=$(date +%s)
 
-
 curl -X POST "http://localhost:${HTTP_PORT}/transfer" \
     -H "Content-Type: application/json" \
-    -d "$REQUEST_BODY"
+    -d "$REQUEST_BODY" \
+    --no-buffer
+
+END_TIME=$(date +%s)
+
+# Calculate transfer statistics
+ELAPSED_TIME=$((END_TIME - START_TIME))
+FILE_SIZE_BYTES=$(stat -c%s "${TEST_FILE}" 2>/dev/null || stat -f%z "${TEST_FILE}")
+FILE_SIZE_BITS=$((FILE_SIZE_BYTES * 8))
+FILE_SIZE_MB=$((FILE_SIZE_BYTES / 1024 / 1024))
+
+# Calculate Mbps (Megabits per second)
+if [ $ELAPSED_TIME -gt 0 ]; then
+    MBPS=$(awk -v bits="$FILE_SIZE_BITS" -v time="$ELAPSED_TIME" 'BEGIN {printf "%.2f", bits / time / 1000000}')
+else
+    MBPS="N/A"
+fi
+
+echo ""
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}  Transfer Complete${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo ""
+echo -e "${GREEN}Transfer Statistics:${NC}"
+echo "File Size: ${FILE_SIZE_MB} MB (${FILE_SIZE_BYTES} bytes)"
+echo "Transfer Time: ${ELAPSED_TIME} seconds"
+echo ""
+echo -e "${GREEN}Transfer Speed: ${MBPS} Mbps${NC}"
+echo ""
