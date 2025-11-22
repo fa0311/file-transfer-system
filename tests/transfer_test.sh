@@ -96,60 +96,7 @@ echo ""
 
 START_TIME=$(date +%s)
 
-sleep 999999999
 
 curl -X POST "http://localhost:${HTTP_PORT}/transfer" \
     -H "Content-Type: application/json" \
-    -d "$REQUEST_BODY" \
-    2>/dev/null | tee "${RESPONSE_LOG}" | while IFS= read -r line; do
-    # Parse NDJSON and display progress
-    if echo "$line" | grep -q '"progress"'; then
-        PROGRESS=$(echo "$line" | grep -o '"progress":[0-9.]*' | cut -d: -f2)
-        BYTES=$(echo "$line" | grep -o '"bytes_transferred":[0-9]*' | cut -d: -f2)
-        BYTES_MB=$((BYTES / 1024 / 1024))
-        printf "\rProgress: %.1f%% (%d MB / %d MB)" "$PROGRESS" "$BYTES_MB" "$((FILE_SIZE_GB * 1024))"
-    elif echo "$line" | grep -q '"level":"error"'; then
-        echo ""
-        echo -e "${RED}Error:${NC} $line"
-        exit 1
-    fi
-done
-
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
-
-echo ""
-echo ""
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  Transfer Complete${NC}"
-echo -e "${BLUE}========================================${NC}"
-echo ""
-echo "File Size: ${FILE_SIZE_GB}GB"
-echo "Transfer Time: ${DURATION}s"
-
-if [ $DURATION -gt 0 ]; then
-    THROUGHPUT=$(echo "scale=2; ($FILE_SIZE_GB * 1024) / $DURATION" | bc)
-    THROUGHPUT_GBPS=$(echo "scale=2; $THROUGHPUT * 8 / 1000" | bc)
-    echo "Throughput: ${THROUGHPUT} MB/s (${THROUGHPUT_GBPS} Gbps)"
-    
-    # Calculate network utilization (assuming 1Gbps = 125 MB/s)
-    UTIL=$(echo "scale=1; $THROUGHPUT / 125 * 100" | bc)
-    echo "Network Utilization (1Gb): ${UTIL}%"
-fi
-
-echo ""
-echo -e "${GREEN}✓ Test completed successfully${NC}"
-echo ""
-echo "Response saved to: ${RESPONSE_LOG}"
-echo "Response line count: $(wc -l < "${RESPONSE_LOG}")"
-echo ""
-echo "Server log:"
-tail -20 /tmp/transfer-server.log
-echo ""
-echo "First 5 response lines:"
-head -5 "${RESPONSE_LOG}"
-echo ""
-echo "Last 5 response lines:"
-tail -5 "${RESPONSE_LOG}"
-
-exit 0
+    -d "$REQUEST_BODY"

@@ -54,7 +54,7 @@ func (s *FileTransferServer) Transfer(stream pb.FileTransfer_TransferServer) err
 	if err != nil {
 		return status.Errorf(codes.Internal, "failed to create file: %v", err)
 	}
-	
+
 	// Track transfer success
 	transferSuccess := false
 	defer func() {
@@ -118,8 +118,8 @@ func StartGRPCServer(ctx context.Context, port, rootDir string) error {
 	}
 
 	grpcServer := grpc.NewServer(
-		grpc.MaxRecvMsgSize(16 * 1024 * 1024), // 16MB
-		grpc.MaxSendMsgSize(16 * 1024 * 1024), // 16MB
+		grpc.MaxRecvMsgSize(16*1024*1024), // 16MB
+		grpc.MaxSendMsgSize(16*1024*1024), // 16MB
 	)
 
 	pb.RegisterFileTransferServer(grpcServer, NewFileTransferServer(rootDir))

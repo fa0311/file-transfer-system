@@ -104,7 +104,7 @@ func (s *HTTPServer) HandleTransfer(w http.ResponseWriter, r *http.Request) {
 						TotalBytes:       0,
 						Error:            err.Error(),
 					}
-					encoder.Encode(logEntry)
+					_ = encoder.Encode(logEntry)
 					flusher.Flush()
 				}
 				return
@@ -135,7 +135,7 @@ func (s *HTTPServer) HandleTransfer(w http.ResponseWriter, r *http.Request) {
 				Message:   "transfer cancelled",
 				Error:     ctx.Err().Error(),
 			}
-			encoder.Encode(logEntry)
+			_ = encoder.Encode(logEntry)
 			flusher.Flush()
 			return
 		}
@@ -144,12 +144,12 @@ func (s *HTTPServer) HandleTransfer(w http.ResponseWriter, r *http.Request) {
 
 func StartHTTPServer(ctx context.Context, port, peerAddr, rootDir string) error {
 	server := NewHTTPServer(peerAddr, rootDir)
-	
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/transfer", server.HandleTransfer)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	httpServer := &http.Server{
@@ -161,7 +161,7 @@ func StartHTTPServer(ctx context.Context, port, peerAddr, rootDir string) error 
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		httpServer.Shutdown(shutdownCtx)
+		_ = httpServer.Shutdown(shutdownCtx)
 	}()
 
 	fmt.Printf("Starting HTTP server: port=%s, peerAddr=%s, rootDir=%s\n", port, peerAddr, rootDir)

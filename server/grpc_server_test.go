@@ -19,7 +19,7 @@ const bufSize = 1024 * 1024
 
 func setupTestServer(t *testing.T) (*grpc.Server, *bufconn.Listener, string) {
 	lis := bufconn.Listen(bufSize)
-	
+
 	tmpDir, err := os.MkdirTemp("", "test-transfer-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -38,6 +38,7 @@ func setupTestServer(t *testing.T) (*grpc.Server, *bufconn.Listener, string) {
 }
 
 func createTestClient(ctx context.Context, lis *bufconn.Listener) (pb.FileTransferClient, *grpc.ClientConn, error) {
+	//nolint:staticcheck // grpc.DialContext is required for bufconn test setup
 	conn, err := grpc.DialContext(ctx, "bufnet",
 		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
 			return lis.Dial()
@@ -107,7 +108,9 @@ func TestFileTransferServer_Transfer_Success(t *testing.T) {
 	}
 
 	// Close send side
-	stream.CloseSend()
+	if err := stream.CloseSend(); err != nil {
+		t.Fatalf("Failed to close send: %v", err)
+	}
 
 	// Receive final response (only response from server)
 	resp, err := stream.Recv()
@@ -117,8 +120,6 @@ func TestFileTransferServer_Transfer_Success(t *testing.T) {
 	if !resp.Success {
 		t.Fatalf("Final response unsuccessful: %s", resp.Message)
 	}
-
-	stream.CloseSend()
 
 	// Verify file was created
 	targetPath := filepath.Join(tmpDir, "test.txt")
@@ -278,7 +279,9 @@ func TestFileTransferServer_Transfer_ByteMismatch(t *testing.T) {
 	}
 
 	// Close send side
-	stream.CloseSend()
+	if err := stream.CloseSend(); err != nil {
+		t.Fatalf("Failed to close send: %v", err)
+	}
 
 	// Should receive error
 	_, err = stream.Recv()

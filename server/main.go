@@ -77,15 +77,3 @@ func getEnv(key, defaultValue string) string {
 	}
 	return defaultValue
 }
-
-func printBanner() {
-	banner := `
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║           File Transfer System v1.0.0                     ║
-║           High-Performance gRPC File Transfer             ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
-`
-	fmt.Println(banner)
-}
