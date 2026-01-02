@@ -23,19 +23,8 @@ type LogEntry struct {
 	Error            string  `json:"error,omitempty"`
 }
 
-type HTTPServer struct {
-	peerAddr string
-	rootDir  string
-}
-
-func NewHTTPServer(peerAddr, rootDir string) *HTTPServer {
-	return &HTTPServer{
-		peerAddr: peerAddr,
-		rootDir:  rootDir,
-	}
-}
-
-func (s *HTTPServer) HandleTransfer(w http.ResponseWriter, r *http.Request) {
+func handleTransfer(peerAddr, rootDir string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -65,7 +54,7 @@ func (s *HTTPServer) HandleTransfer(w http.ResponseWriter, r *http.Request) {
 	// Start transfer in goroutine
 	ctx := r.Context()
 	go func() {
-		err := TransferFile(ctx, s.peerAddr, req.Source, req.Target, s.rootDir, progressChan)
+		err := TransferFile(ctx, peerAddr, req.Source, req.Target, rootDir, progressChan)
 		if err != nil {
 			errChan <- err
 		}
@@ -106,6 +95,12 @@ func (s *HTTPServer) HandleTransfer(w http.ResponseWriter, r *http.Request) {
 					}
 					_ = encoder.Encode(logEntry)
 					flusher.Flush()
+					
+					// Force close TCP connection to signal error to curl
+					if hijacker, ok := w.(http.Hijacker); ok {
+						conn, _, _ := hijacker.Hijack()
+						conn.Close()
+					}
 				}
 				return
 			}
@@ -137,16 +132,21 @@ func (s *HTTPServer) HandleTransfer(w http.ResponseWriter, r *http.Request) {
 			}
 			_ = encoder.Encode(logEntry)
 			flusher.Flush()
+			
+			// Force close TCP connection to signal error to curl
+			if hijacker, ok := w.(http.Hijacker); ok {
+				conn, _, _ := hijacker.Hijack()
+				conn.Close()
+			}
 			return
 		}
+	}
 	}
 }
 
 func StartHTTPServer(ctx context.Context, port, peerAddr, rootDir string) error {
-	server := NewHTTPServer(peerAddr, rootDir)
-
 	mux := http.NewServeMux()
-	mux.HandleFunc("/transfer", server.HandleTransfer)
+	mux.HandleFunc("/transfer", handleTransfer(peerAddr, rootDir))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("OK"))

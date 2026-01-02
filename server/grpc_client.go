@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	ChunkSize        = 8 * 1024 * 1024 // 8MB chunks for optimal network performance
-	ProgressInterval = time.Second     // Progress update interval
+	ChunkSize        = 8 * 1024 * 1024  // 8MB chunks for optimal network performance
+	MaxMessageSize   = 16 * 1024 * 1024 // 16MB max gRPC message size
+	ProgressInterval = time.Second      // Progress update interval
 )
 
 type TransferProgress struct {
@@ -51,13 +52,9 @@ func TransferFile(ctx context.Context, peerAddr, sourcePath, targetPath, rootDir
 	conn, err := grpc.NewClient(peerAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(16*1024*1024),
-			grpc.MaxCallSendMsgSize(16*1024*1024),
+			grpc.MaxCallRecvMsgSize(MaxMessageSize),
+			grpc.MaxCallSendMsgSize(MaxMessageSize),
 		),
-		grpc.WithInitialWindowSize(1<<30),     // 1GB initial window
-		grpc.WithInitialConnWindowSize(1<<30), // 1GB connection window
-		grpc.WithWriteBufferSize(1<<20),       // 1MB write buffer
-		grpc.WithReadBufferSize(1<<20),        // 1MB read buffer
 	)
 	if err != nil {
 		return fmt.Errorf("failed to connect to peer server: %v", err)

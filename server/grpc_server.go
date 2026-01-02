@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	maxMessageSize = 16 * 1024 * 1024 // 16MB max gRPC message size
 )
 
 type FileTransferServer struct {
@@ -112,14 +117,14 @@ func (s *FileTransferServer) Transfer(stream pb.FileTransfer_TransferServer) err
 }
 
 func StartGRPCServer(ctx context.Context, port, rootDir string) error {
-	lis, err := NewListener(port)
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		return fmt.Errorf("failed to create listener: %v", err)
+		return fmt.Errorf("failed to listen on port %s: %v", port, err)
 	}
 
 	grpcServer := grpc.NewServer(
-		grpc.MaxRecvMsgSize(16*1024*1024), // 16MB
-		grpc.MaxSendMsgSize(16*1024*1024), // 16MB
+		grpc.MaxRecvMsgSize(maxMessageSize),
+		grpc.MaxSendMsgSize(maxMessageSize),
 	)
 
 	pb.RegisterFileTransferServer(grpcServer, NewFileTransferServer(rootDir))

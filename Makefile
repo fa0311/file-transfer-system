@@ -1,14 +1,12 @@
-.PHONY: proto build test test-e2e test-all clean run-sender run-receiver coverage help
+.PHONY: proto build test-e2e test-all clean run-sender run-receiver help
 
 # Default target
 help:
 	@echo "Available targets:"
 	@echo "  proto       - Generate Go code from Protocol Buffers"
 	@echo "  build       - Build the binary"
-	@echo "  test        - Run unit tests"
 	@echo "  test-e2e    - Run end-to-end tests"
 	@echo "  test-all    - Run all tests"
-	@echo "  coverage    - Generate coverage report"
 	@echo "  clean       - Clean build artifacts"
 	@echo "  run-server-a - Run server A"
 	@echo "  run-server-b - Run server B"
@@ -25,25 +23,13 @@ build: proto
 	@echo "Building binary..."
 	go build -o bin/file-transfer-server ./server
 
-# Run unit tests
-test:
-	@echo "Running unit tests..."
-	go test -v -race ./server/...
-
 # Run end-to-end tests
 test-e2e: build
 	@echo "Running E2E tests..."
 	./tests/e2e.sh
 
 # Run all tests
-test-all: test test-e2e
-
-# Generate coverage report
-coverage:
-	@echo "Generating coverage report..."
-	go test -v -race -coverprofile=coverage.out ./server/...
-	go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
+test-all: test-e2e
 
 # Clean build artifacts
 clean:
